@@ -1,0 +1,34 @@
+# Node
+node_modules/
+dist/
+.vite/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+.env.*
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+
+# Logs
+*.log
+logs/
+
+# Coverage / builds
+.coverage
+htmlcov/
+build/
+
+# DB / caches
+postgres_data/
+redis_data/
+*.sqlite3
+
+# Others
+*.pem
