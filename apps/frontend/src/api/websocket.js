@@ -12,6 +12,9 @@ class AgentWebSocket {
   }
 
   connect() {
+    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
     const token = useAuthStore.getState().token;
     if (!token) {
       console.warn('No auth token available for WebSocket');
