@@ -15,6 +15,7 @@ class AccountCreate(AccountBase):
 class AccountOut(AccountBase):
     id: UUID
     user_id: UUID
+    account_number: Optional[str] = None
     balance_cents: int
     status: str
     created_at: datetime
@@ -26,5 +27,6 @@ class AccountOut(AccountBase):
 class AccountBalance(BaseModel):
     id: UUID
     type: str
+    account_number: Optional[str] = None
     balance: float
     status: str

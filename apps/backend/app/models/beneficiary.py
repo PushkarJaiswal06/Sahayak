@@ -15,4 +15,5 @@ class Beneficiary(Base):
     name = Column(String(255), nullable=False)
     account_number = Column(String(64), nullable=False)
     ifsc = Column(String(32), nullable=False)
+    bank_name = Column(String(128), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

@@ -8,8 +8,10 @@ class LedgerEntry(BaseModel):
     id: UUID
     account_id: UUID
     amount_cents: int
+    type: str = "TRANSFER"
     counterparty: Optional[str] = None
     narration: Optional[str] = None
+    reference_id: Optional[str] = None
     created_at: datetime
 
     class Config:

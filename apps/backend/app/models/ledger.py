@@ -12,6 +12,8 @@ class Ledger(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     account_id = Column(UUID(as_uuid=True), ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False, index=True)
     amount_cents = Column(BigInteger, nullable=False)
+    type = Column(String(32), nullable=False, default="TRANSFER")  # TRANSFER, BILL_PAY, DEPOSIT, etc.
     counterparty = Column(String(255), nullable=True)
     narration = Column(String(512), nullable=True)
+    reference_id = Column(String(64), nullable=True, index=True)  # External reference
     created_at = Column(DateTime(timezone=True), server_default=func.now(), nullable=False)

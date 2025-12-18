@@ -11,6 +11,7 @@ class UserBase(BaseModel):
 
 class UserCreate(UserBase):
     password: str
+    full_name: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -22,6 +23,7 @@ class UserLogin(BaseModel):
 class UserOut(UserBase):
     id: UUID
     role: str
+    full_name: Optional[str] = None
     created_at: datetime
 
     class Config:

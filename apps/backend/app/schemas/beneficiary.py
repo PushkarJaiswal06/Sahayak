@@ -9,6 +9,7 @@ class BeneficiaryBase(BaseModel):
     name: str
     account_number: str
     ifsc: str
+    bank_name: Optional[str] = None
 
 
 class BeneficiaryCreate(BeneficiaryBase):

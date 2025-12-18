@@ -28,8 +28,9 @@ def register(payload: UserCreate, db: Session = Depends(get_db)):
         id=uuid.uuid4(),
         phone_number=payload.phone_number,
         email=payload.email,
+        password_hash=hashed,
+        full_name=payload.full_name,
         role=UserRole.USER,
-        pii_encrypted=hashed,
     )
     db.add(user)
     db.commit()
@@ -45,10 +46,10 @@ def login(payload: UserLogin, db: Session = Depends(get_db)):
     elif payload.phone_number:
         user = db.query(User).filter(User.phone_number == payload.phone_number).first()
 
-    if not user or not user.pii_encrypted:
+    if not user or not user.password_hash:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    if not verify_password(payload.password, user.pii_encrypted):
+    if not verify_password(payload.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     access_token = create_access_token(

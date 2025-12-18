@@ -23,7 +23,13 @@ DAILY_LIMIT_CENTS = 50_000_00
 def list_accounts(db: Session = Depends(get_db), user: User = Depends(get_current_user)):
     accounts = db.query(Account).filter(Account.user_id == user.id).all()
     return [
-        AccountBalance(id=a.id, type=a.type.value, balance=a.balance_cents / 100, status=a.status)
+        AccountBalance(
+            id=a.id,
+            type=a.type.value,
+            account_number=a.account_number,
+            balance=a.balance_cents / 100,
+            status=a.status,
+        )
         for a in accounts
     ]
 
@@ -101,6 +107,7 @@ def add_beneficiary(
         name=payload.name,
         account_number=payload.account_number,
         ifsc=payload.ifsc,
+        bank_name=payload.bank_name,
     )
     db.add(ben)
     db.commit()
