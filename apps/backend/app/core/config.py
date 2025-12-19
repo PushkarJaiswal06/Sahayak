@@ -1,11 +1,19 @@
 import os
 from functools import lru_cache
-from typing import List
+from typing import List, Union
 
-from pydantic_settings import BaseSettings
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=f".env.{os.getenv('APP_ENV', 'development')}",
+        env_file_encoding="utf-8",
+        case_sensitive=True,
+        extra="ignore",
+    )
+
     PROJECT_NAME: str = "Sahayak"
     VERSION: str = "0.1.0"
     API_V1_STR: str = "/api/v1"
@@ -28,7 +36,7 @@ class Settings(BaseSettings):
     SECRET_KEY: str = "changeme"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
-    BACKEND_CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://localhost"]
+    BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://localhost"
 
     @property
     def DATABASE_URL(self) -> str:
@@ -39,14 +47,7 @@ class Settings(BaseSettings):
 
     @property
     def cors_origins(self) -> List[str]:
-        if isinstance(self.BACKEND_CORS_ORIGINS, str):
-            return [o.strip() for o in self.BACKEND_CORS_ORIGINS.split(",") if o.strip()]
-        return self.BACKEND_CORS_ORIGINS
-
-    class Config:
-        env_file = f".env.{os.getenv('APP_ENV', 'development')}"
-        env_file_encoding = "utf-8"
-        case_sensitive = True
+        return [o.strip() for o in self.BACKEND_CORS_ORIGINS.split(",") if o.strip()]
 
 
 @lru_cache()
