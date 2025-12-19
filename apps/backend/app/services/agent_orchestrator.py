@@ -1,6 +1,7 @@
 import uuid
 import json
 import base64
+import time
 from typing import Dict, Any, Optional
 from fastapi import WebSocket
 from loguru import logger
@@ -8,6 +9,7 @@ from loguru import logger
 from app.services.stt_service import STTService
 from app.services.llm_service import LLMService
 from app.services.tts_service import TTSService
+from app.services.audit_service import audit_service
 from app.schemas.agent import AgentActionPlan, AgentStep
 
 
@@ -18,6 +20,7 @@ class AgentOrchestrator:
         self.tts = TTSService()
         self.user_contexts: Dict[str, dict] = {}
         self.audio_buffers: Dict[str, bytearray] = {}
+        self.pending_audits: Dict[str, uuid.UUID] = {}  # plan_id -> audit_id
 
     async def handle_audio_chunk(self, ws: WebSocket, user_id: str, audio_bytes: bytes):
         """Accumulate audio chunks from client"""
@@ -36,6 +39,15 @@ class AgentOrchestrator:
         plan_id = payload.get("plan_id")
         status = payload.get("status")
         error = payload.get("error")
+        
+        # Update audit log with result
+        if plan_id and plan_id in self.pending_audits:
+            audit_id = self.pending_audits.pop(plan_id)
+            await audit_service.update_result(
+                audit_id=audit_id,
+                result=status,
+                error=error,
+            )
 
         if status == "success":
             text = "Done. What else can I help you with?"
@@ -47,6 +59,7 @@ class AgentOrchestrator:
     async def process_command(self, ws: WebSocket, user_id: str, transcript: str):
         """Process a voice command: generate plan and speak response"""
         context = self.user_contexts.get(user_id, {})
+        start_time = time.time()
         
         logger.info(f"Processing command from {user_id}: '{transcript}'")
         
@@ -57,6 +70,24 @@ class AgentOrchestrator:
         except Exception as e:
             logger.warning(f"LLM failed, using keyword fallback: {e}")
             plan = self.llm.create_simple_plan(transcript)
+        
+        # Log command to audit trail
+        try:
+            audit_id = await audit_service.log_command(
+                user_id=uuid.UUID(user_id),
+                command_text=transcript,
+                action_json=plan.model_dump(),
+                result="dispatched",
+                metadata={
+                    "context_url": context.get("url"),
+                    "step_count": len(plan.steps),
+                    "llm_time_ms": int((time.time() - start_time) * 1000),
+                },
+            )
+            # Track for later result update
+            self.pending_audits[str(plan.plan_id)] = audit_id
+        except Exception as e:
+            logger.error(f"Failed to create audit log: {e}")
 
         # Speak acknowledgement FIRST (before navigation)
         speak_text = self._get_acknowledgement(plan)

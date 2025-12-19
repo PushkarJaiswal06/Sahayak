@@ -1,13 +1,18 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Navigate, Outlet, Route, Routes, Link, useNavigate } from 'react-router-dom';
 import AgentContextProvider from './contexts/AgentContext';
 import VoiceOrb from './components/VoiceOrb';
+import ErrorBoundary from './components/ErrorBoundary';
+import { LoadingOverlay } from './components/Loading';
+import ConnectionBanner from './components/ConnectionStatus';
 import useAuthStore from './stores/authStore';
-import Login from './features/Login';
-import Dashboard from './features/Dashboard';
-import Transfers from './features/Transfers';
-import Bills from './features/Bills';
-import Profile from './features/Profile';
+
+// Lazy load feature pages for code splitting
+const Login = React.lazy(() => import('./features/Login'));
+const Dashboard = React.lazy(() => import('./features/Dashboard'));
+const Transfers = React.lazy(() => import('./features/Transfers'));
+const Bills = React.lazy(() => import('./features/Bills'));
+const Profile = React.lazy(() => import('./features/Profile'));
 
 function Shell() {
   const { isAuthenticated, logout } = useAuthStore();
@@ -64,26 +69,31 @@ function ProtectedRoute({ children }) {
 
 function App() {
   return (
-    <AgentContextProvider>
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route
-          element={
-            <ProtectedRoute>
-              <Shell />
-            </ProtectedRoute>
-          }
-        >
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/transfers" element={<Transfers />} />
-          <Route path="/bills" element={<Bills />} />
-          <Route path="/profile" element={<Profile />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
-      </Routes>
-      <VoiceOrb />
-    </AgentContextProvider>
+    <ErrorBoundary>
+      <AgentContextProvider>
+        <ConnectionBanner />
+        <Suspense fallback={<LoadingOverlay message="Loading Sahayak..." />}>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route
+              element={
+                <ProtectedRoute>
+                  <Shell />
+                </ProtectedRoute>
+              }
+            >
+              <Route path="/" element={<Navigate to="/dashboard" replace />} />
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/transfers" element={<Transfers />} />
+              <Route path="/bills" element={<Bills />} />
+              <Route path="/profile" element={<Profile />} />
+            </Route>
+            <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          </Routes>
+        </Suspense>
+        <VoiceOrb />
+      </AgentContextProvider>
+    </ErrorBoundary>
   );
 }
 

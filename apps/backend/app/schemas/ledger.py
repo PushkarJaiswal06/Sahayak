@@ -23,9 +23,12 @@ class TransferRequest(BaseModel):
     amount_cents: int
     mode: str = "IMPS"
     narration: Optional[str] = None
+    confirmed: bool = False  # For high-value transactions
 
 
 class TransferResponse(BaseModel):
     success: bool
-    transaction_id: UUID
+    transaction_id: Optional[UUID] = None
     message: str
+    requires_confirmation: bool = False
+    amount: Optional[float] = None  # Amount in rupees for confirmation dialog
