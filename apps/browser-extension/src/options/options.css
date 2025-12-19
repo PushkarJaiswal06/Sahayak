@@ -1,0 +1,417 @@
+/* Sahayak Voice Agent - Options Styles */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+  background: #f0f2f5;
+  color: #333;
+  line-height: 1.6;
+}
+
+.options-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+/* Header */
+.options-header {
+  text-align: center;
+  padding: 30px 0;
+  margin-bottom: 20px;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 10px;
+}
+
+.logo-icon {
+  font-size: 32px;
+}
+
+.options-header h1 {
+  font-size: 16px;
+  font-weight: 400;
+  color: #666;
+}
+
+/* Main */
+.options-main {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Settings Section */
+.settings-section {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.settings-section h2 {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.section-icon {
+  font-size: 20px;
+}
+
+/* Form Groups */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+.form-group label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.form-group input[type="text"],
+.form-group input[type="password"],
+.form-group input[type="url"],
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Input Group */
+.input-group {
+  display: flex;
+  gap: 8px;
+}
+
+.input-group input {
+  flex: 1;
+}
+
+.toggle-visibility {
+  padding: 10px 12px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.toggle-visibility:hover {
+  background: #eee;
+}
+
+/* Range Input */
+.range-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.range-group input[type="range"] {
+  flex: 1;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #ddd;
+  border-radius: 3px;
+}
+
+.range-group input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  background: #667eea;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.range-value {
+  font-size: 14px;
+  font-weight: 500;
+  color: #667eea;
+  min-width: 40px;
+}
+
+/* Checkbox Group */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.checkbox-group input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #667eea;
+}
+
+.checkbox-group label {
+  margin: 0;
+  cursor: pointer;
+}
+
+/* Help Text */
+.help-text {
+  display: block;
+  font-size: 12px;
+  color: #888;
+  margin-top: 6px;
+}
+
+.help-text a {
+  color: #667eea;
+  text-decoration: none;
+}
+
+.help-text a:hover {
+  text-decoration: underline;
+}
+
+/* Shortcut Item */
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+}
+
+.shortcut-label {
+  font-size: 14px;
+  color: #333;
+}
+
+kbd {
+  padding: 4px 8px;
+  background: #f5f5f5;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Buttons */
+.primary-btn,
+.secondary-btn,
+.danger-btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.primary-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  color: white;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.secondary-btn {
+  background: white;
+  border: 1px solid #ddd;
+  color: #666;
+}
+
+.secondary-btn:hover {
+  background: #f5f5f5;
+  border-color: #ccc;
+}
+
+.danger-btn {
+  background: white;
+  border: 1px solid #ff4757;
+  color: #ff4757;
+}
+
+.danger-btn:hover {
+  background: #fff5f5;
+}
+
+/* Footer */
+.options-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 30px 0;
+  margin-top: 20px;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  z-index: 1000;
+  animation: slideUp 0.3s ease;
+}
+
+.toast.success {
+  background: #10b981;
+  color: white;
+}
+
+.toast.error {
+  background: #ef4444;
+  color: white;
+}
+
+.toast.hidden {
+  display: none;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateX(-50%) translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Dark Mode */
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #1a1a1a;
+    color: #fff;
+  }
+
+  .logo {
+    color: #fff;
+  }
+
+  .options-header h1 {
+    color: #aaa;
+  }
+
+  .settings-section {
+    background: #2d2d2d;
+  }
+
+  .settings-section h2 {
+    border-bottom-color: #444;
+  }
+
+  .form-group label {
+    color: #fff;
+  }
+
+  .form-group input,
+  .form-group select {
+    background: #3d3d3d;
+    border-color: #555;
+    color: #fff;
+  }
+
+  .toggle-visibility {
+    background: #3d3d3d;
+    border-color: #555;
+  }
+
+  .toggle-visibility:hover {
+    background: #4d4d4d;
+  }
+
+  .range-group input[type="range"] {
+    background: #444;
+  }
+
+  .help-text {
+    color: #888;
+  }
+
+  kbd {
+    background: #3d3d3d;
+    border-color: #555;
+    color: #fff;
+  }
+
+  .secondary-btn {
+    background: #3d3d3d;
+    border-color: #555;
+    color: #fff;
+  }
+
+  .secondary-btn:hover {
+    background: #4d4d4d;
+  }
+
+  .danger-btn {
+    background: #3d3d3d;
+  }
+
+  .danger-btn:hover {
+    background: #4d3d3d;
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .options-container {
+    padding: 10px;
+  }
+
+  .settings-section {
+    padding: 16px;
+  }
+
+  .options-footer {
+    flex-direction: column;
+  }
+
+  .options-footer button {
+    width: 100%;
+  }
+}

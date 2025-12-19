@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sahayak Voice Agent - Settings</title>
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <header class="options-header">
+      <div class="logo">
+        <span class="logo-icon">🎤</span>
+        <span>Sahayak Voice Agent</span>
+      </div>
+      <h1>Settings</h1>
+    </header>
+
+    <main class="options-main">
+      <!-- LLM Settings -->
+      <section class="settings-section">
+        <h2>
+          <span class="section-icon">🧠</span>
+          Language Model
+        </h2>
+        
+        <div class="form-group">
+          <label for="llm-provider">Provider</label>
+          <select id="llm-provider">
+            <option value="groq">Groq (Fast)</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="local">Local (Ollama)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="llm-api-key">API Key</label>
+          <div class="input-group">
+            <input type="password" id="llm-api-key" placeholder="Enter your API key">
+            <button type="button" class="toggle-visibility" data-target="llm-api-key">
+              👁
+            </button>
+          </div>
+          <small class="help-text">
+            Get your API key from 
+            <a href="https://console.groq.com" target="_blank">Groq Console</a>
+          </small>
+        </div>
+
+        <div class="form-group">
+          <label for="llm-model">Model</label>
+          <select id="llm-model">
+            <optgroup label="Groq">
+              <option value="llama-3.3-70b-versatile">Llama 3.3 70B (Recommended)</option>
+              <option value="llama-3.1-8b-instant">Llama 3.1 8B (Fast)</option>
+              <option value="mixtral-8x7b-32768">Mixtral 8x7B</option>
+            </optgroup>
+            <optgroup label="OpenAI">
+              <option value="gpt-4o">GPT-4o</option>
+              <option value="gpt-4o-mini">GPT-4o Mini</option>
+            </optgroup>
+            <optgroup label="Anthropic">
+              <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet</option>
+              <option value="claude-3-5-haiku-latest">Claude 3.5 Haiku</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div class="form-group" id="local-url-group" style="display: none;">
+          <label for="local-url">Local Server URL</label>
+          <input type="url" id="local-url" placeholder="http://localhost:11434">
+        </div>
+      </section>
+
+      <!-- Voice Settings -->
+      <section class="settings-section">
+        <h2>
+          <span class="section-icon">🔊</span>
+          Voice Settings
+        </h2>
+
+        <div class="form-group">
+          <label for="stt-provider">Speech Recognition</label>
+          <select id="stt-provider">
+            <option value="web-speech">Web Speech API (Free)</option>
+            <option value="whisper">Whisper (Local)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="en-US">English (US)</option>
+            <option value="en-GB">English (UK)</option>
+            <option value="en-IN">English (India)</option>
+            <option value="hi-IN">Hindi</option>
+            <option value="es-ES">Spanish</option>
+            <option value="fr-FR">French</option>
+            <option value="de-DE">German</option>
+            <option value="ja-JP">Japanese</option>
+            <option value="ko-KR">Korean</option>
+            <option value="zh-CN">Chinese (Simplified)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="voice">Voice</label>
+          <select id="voice">
+            <!-- Populated dynamically -->
+          </select>
+          <button type="button" id="test-voice" class="secondary-btn">
+            🔊 Test Voice
+          </button>
+        </div>
+
+        <div class="form-group">
+          <label for="speech-rate">Speech Rate</label>
+          <div class="range-group">
+            <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1">
+            <span class="range-value">1x</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Wake Word Settings -->
+      <section class="settings-section">
+        <h2>
+          <span class="section-icon">👂</span>
+          Wake Word
+        </h2>
+
+        <div class="form-group">
+          <div class="checkbox-group">
+            <input type="checkbox" id="wake-word-enabled">
+            <label for="wake-word-enabled">Enable wake word detection</label>
+          </div>
+          <small class="help-text">
+            Say the wake word to activate voice input without clicking
+          </small>
+        </div>
+
+        <div class="form-group" id="wake-word-group">
+          <label for="wake-word">Wake Word</label>
+          <input type="text" id="wake-word" placeholder="Hey Sahayak" value="Hey Sahayak">
+        </div>
+      </section>
+
+      <!-- Keyboard Shortcuts -->
+      <section class="settings-section">
+        <h2>
+          <span class="section-icon">⌨️</span>
+          Keyboard Shortcuts
+        </h2>
+
+        <div class="shortcut-item">
+          <span class="shortcut-label">Toggle Voice</span>
+          <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>V</kbd>
+        </div>
+
+        <small class="help-text">
+          <a href="chrome://extensions/shortcuts" id="change-shortcuts">
+            Change keyboard shortcuts in Chrome settings
+          </a>
+        </small>
+      </section>
+
+      <!-- Privacy Settings -->
+      <section class="settings-section">
+        <h2>
+          <span class="section-icon">🔒</span>
+          Privacy
+        </h2>
+
+        <div class="form-group">
+          <div class="checkbox-group">
+            <input type="checkbox" id="send-page-context" checked>
+            <label for="send-page-context">Send page context to LLM</label>
+          </div>
+          <small class="help-text">
+            Allows better understanding of page content for more accurate responses
+          </small>
+        </div>
+
+        <div class="form-group">
+          <div class="checkbox-group">
+            <input type="checkbox" id="save-history">
+            <label for="save-history">Save conversation history</label>
+          </div>
+          <small class="help-text">
+            Stores recent conversations locally for context
+          </small>
+        </div>
+
+        <div class="form-group">
+          <button type="button" id="clear-data" class="danger-btn">
+            🗑 Clear All Data
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="options-footer">
+      <button type="button" id="save-btn" class="primary-btn">
+        💾 Save Settings
+      </button>
+      <button type="button" id="reset-btn" class="secondary-btn">
+        Reset to Defaults
+      </button>
+    </footer>
+
+    <div class="toast hidden" id="toast">
+      <span class="toast-message"></span>
+    </div>
+  </div>
+
+  <script type="module" src="options.ts"></script>
+</body>
+</html>
