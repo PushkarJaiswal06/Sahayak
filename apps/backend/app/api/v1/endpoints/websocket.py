@@ -1,5 +1,6 @@
 import uuid
 import json
+import base64
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query
 from sqlalchemy.orm import Session
 from loguru import logger
@@ -28,10 +29,16 @@ async def agent_websocket(
 
     user_id = payload.get("sub")
     await manager.connect(websocket, user_id)
+    logger.info(f"WebSocket connected for user {user_id}")
 
     try:
         while True:
-            data = await websocket.receive()
+            try:
+                data = await websocket.receive()
+            except RuntimeError as e:
+                # Handle "Cannot call receive once disconnect received"
+                logger.debug(f"WebSocket receive error (likely navigation): {e}")
+                break
 
             if "bytes" in data:
                 # AUDIO_CHUNK binary frame
@@ -42,16 +49,35 @@ async def agent_websocket(
                 # JSON message
                 msg = json.loads(data["text"])
                 msg_type = msg.get("type")
+                payload_data = msg.get("payload", {})
 
                 if msg_type == "CONTEXT_UPDATE":
-                    await orchestrator.handle_context_update(websocket, user_id, msg.get("payload", {}))
+                    await orchestrator.handle_context_update(websocket, user_id, payload_data)
 
                 elif msg_type == "EXECUTION_RESULT":
-                    await orchestrator.handle_execution_result(websocket, user_id, msg.get("payload", {}))
+                    await orchestrator.handle_execution_result(websocket, user_id, payload_data)
+
+                elif msg_type == "AUDIO_END":
+                    # Client signals end of audio recording
+                    logger.info(f"Audio end signal from {user_id}")
+                    await orchestrator.finalize_audio(websocket, user_id)
+
+                elif msg_type == "TEXT_COMMAND":
+                    # Text-based command for testing without voice
+                    text = payload_data.get("text", "")
+                    if text:
+                        await orchestrator.handle_text_command(websocket, user_id, text)
+
+                elif msg_type == "AUDIO_CHUNK_BASE64":
+                    # Base64 encoded audio chunk (for browsers that can't send binary)
+                    audio_b64 = payload_data.get("audio", "")
+                    if audio_b64:
+                        audio_bytes = base64.b64decode(audio_b64)
+                        await orchestrator.handle_audio_chunk(websocket, user_id, audio_bytes)
 
     except WebSocketDisconnect:
-        manager.disconnect(user_id)
-        logger.info(f"User {user_id} disconnected")
+        logger.info(f"User {user_id} disconnected (navigation or close)")
     except Exception as e:
-        logger.exception(f"WebSocket error for user {user_id}: {e}")
+        logger.warning(f"WebSocket closed for user {user_id}: {type(e).__name__}")
+    finally:
         manager.disconnect(user_id)

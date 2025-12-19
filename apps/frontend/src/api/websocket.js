@@ -4,7 +4,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8000/ws/agent/v1';
 
 class AgentWebSocket {
   constructor() {
-    this.socket = null;
+    this.ws = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectDelay = 1000;
@@ -12,7 +12,7 @@ class AgentWebSocket {
   }
 
   connect() {
-    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
     }
     const token = useAuthStore.getState().token;
@@ -22,30 +22,31 @@ class AgentWebSocket {
     }
 
     const url = `${WS_URL}?auth_token=${encodeURIComponent(token)}`;
-    this.socket = new WebSocket(url);
+    this.ws = new WebSocket(url);
 
-    this.socket.onopen = () => {
+    this.ws.onopen = () => {
       console.log('Agent WebSocket connected');
       this.reconnectAttempts = 0;
       this.emit('connected');
     };
 
-    this.socket.onmessage = (event) => {
+    this.ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('WS received:', data.type, data.payload);
         this.emit(data.type, data.payload);
       } catch (e) {
         console.error('WebSocket message parse error:', e);
       }
     };
 
-    this.socket.onclose = (event) => {
+    this.ws.onclose = (event) => {
       console.log('Agent WebSocket closed:', event.code);
       this.emit('disconnected');
       this.attemptReconnect();
     };
 
-    this.socket.onerror = (error) => {
+    this.ws.onerror = (error) => {
       console.error('Agent WebSocket error:', error);
       this.emit('error', error);
     };
@@ -61,21 +62,21 @@ class AgentWebSocket {
   }
 
   disconnect() {
-    if (this.socket) {
-      this.socket.close();
-      this.socket = null;
+    if (this.ws) {
+      this.ws.close();
+      this.ws = null;
     }
   }
 
   sendAudioChunk(audioData) {
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket.send(audioData);
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(audioData);
     }
   }
 
   sendContextUpdate(context) {
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify({
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
         type: 'CONTEXT_UPDATE',
         payload: context,
       }));
@@ -83,8 +84,8 @@ class AgentWebSocket {
   }
 
   sendExecutionResult(planId, status, error = null) {
-    if (this.socket?.readyState === WebSocket.OPEN) {
-      this.socket.send(JSON.stringify({
+    if (this.ws?.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({
         type: 'EXECUTION_RESULT',
         payload: { plan_id: planId, status, error },
       }));

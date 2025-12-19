@@ -38,6 +38,12 @@ class Settings(BaseSettings):
 
     BACKEND_CORS_ORIGINS: str = "http://localhost:5173,http://localhost"
 
+    # AI Services
+    DEEPGRAM_API_KEY: str = ""
+    GROQ_API_KEY: str = ""
+    ELEVENLABS_API_KEY: str = ""
+    ELEVENLABS_VOICE_ID: str = "21m00Tcm4TlvDq8ikWAM"
+
     @property
     def DATABASE_URL(self) -> str:
         return (

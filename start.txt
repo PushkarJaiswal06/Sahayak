@@ -1,0 +1,12 @@
+# 1. Start databases (if not already running)
+cd D:\Sahayak
+docker-compose up -d postgres redis
+
+# 2. Start backend (new terminal)
+cd D:\Sahayak\apps\backend
+$env:APP_ENV="local"
+.\.venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
+
+# 3. Start frontend (new terminal)
+cd D:\Sahayak\apps\frontend
+npm run dev

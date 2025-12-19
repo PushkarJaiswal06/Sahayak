@@ -1,72 +1,71 @@
-import os
-import httpx
-from typing import Optional
+import base64
+import io
+from typing import Optional, AsyncGenerator
 from loguru import logger
-
-from app.core.config import settings
+import edge_tts
 
 
 class TTSService:
-    """Text-to-Speech using ElevenLabs Turbo v2"""
+    """Text-to-Speech using Microsoft Edge TTS (free, no API key needed)"""
+
+    # Available voices: https://github.com/rany2/edge-tts
+    # Female voices: en-US-AriaNeural, en-US-JennyNeural, en-IN-NeerjaNeural
+    # Male voices: en-US-GuyNeural, en-US-ChristopherNeural, en-IN-PrabhatNeural
+    DEFAULT_VOICE = "en-US-AriaNeural"  # Natural female voice
 
     def __init__(self):
-        self.api_key = os.getenv("ELEVENLABS_API_KEY", "")
-        self.base_url = "https://api.elevenlabs.io/v1/text-to-speech"
-        self.voice_id = os.getenv("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")  # Rachel
+        self.voice = self.DEFAULT_VOICE
 
-    async def synthesize(self, text: str) -> Optional[str]:
-        if not self.api_key:
-            logger.warning("ELEVENLABS_API_KEY not set; returning None")
+    async def synthesize(self, text: str) -> Optional[bytes]:
+        """Synthesize text to audio bytes using Edge TTS"""
+        if not text or not text.strip():
+            logger.warning("Empty text provided for TTS")
             return None
-
-        headers = {
-            "xi-api-key": self.api_key,
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "text": text,
-            "model_id": "eleven_turbo_v2",
-            "voice_settings": {
-                "stability": 0.5,
-                "similarity_boost": 0.75,
-            },
-        }
 
         try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                response = await client.post(
-                    f"{self.base_url}/{self.voice_id}",
-                    headers=headers,
-                    json=payload,
-                )
-                response.raise_for_status()
-                # In production, would upload to S3/CDN and return URL
-                # For now, return placeholder
-                return f"/audio/{hash(text)}.mp3"
+            communicate = edge_tts.Communicate(text, self.voice)
+            audio_buffer = io.BytesIO()
+            
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    audio_buffer.write(chunk["data"])
+            
+            audio_bytes = audio_buffer.getvalue()
+            if audio_bytes:
+                logger.info(f"TTS generated {len(audio_bytes)} bytes for: '{text[:50]}...'")
+                return audio_bytes
+            else:
+                logger.warning("Edge TTS returned empty audio")
+                return None
+                
         except Exception as e:
-            logger.exception(f"TTS error: {e}")
-            return None
+            logger.exception(f"Edge TTS error: {e}")
+            raise
 
-    async def synthesize_stream(self, text: str):
+    async def synthesize_base64(self, text: str) -> Optional[str]:
+        """Synthesize text and return as base64 encoded string"""
+        audio_bytes = await self.synthesize(text)
+        if audio_bytes:
+            return base64.b64encode(audio_bytes).decode("utf-8")
+        return None
+
+    async def synthesize_stream(self, text: str) -> AsyncGenerator[bytes, None]:
         """Stream audio chunks for real-time playback"""
-        if not self.api_key:
+        if not text or not text.strip():
+            logger.warning("Empty text provided for TTS streaming")
             return
 
-        headers = {
-            "xi-api-key": self.api_key,
-            "Content-Type": "application/json",
-        }
-        payload = {
-            "text": text,
-            "model_id": "eleven_turbo_v2",
-        }
+        try:
+            communicate = edge_tts.Communicate(text, self.voice)
+            async for chunk in communicate.stream():
+                if chunk["type"] == "audio":
+                    yield chunk["data"]
+        except Exception as e:
+            logger.exception(f"Edge TTS streaming error: {e}")
+            raise
 
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            async with client.stream(
-                "POST",
-                f"{self.base_url}/{self.voice_id}/stream",
-                headers=headers,
-                json=payload,
-            ) as response:
-                async for chunk in response.aiter_bytes():
-                    yield chunk
+    def set_voice(self, voice: str):
+        """Change the TTS voice"""
+        self.voice = voice
+        logger.info(f"TTS voice changed to: {voice}")
+

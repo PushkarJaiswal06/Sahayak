@@ -1,4 +1,4 @@
-import React, { createContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useEffect, useMemo, useState, useRef, useCallback } from 'react';
 import agentSocket from '../api/websocket';
 import useAgentExecution from '../hooks/useAgentExecution';
 import useAuthStore from '../stores/authStore';
@@ -13,6 +13,45 @@ function AgentContextProvider({ children }) {
   const [lastPlan, setLastPlan] = useState(null);
   const [connection, setConnection] = useState({ connected: false, attempts: 0 });
   const [error, setError] = useState(null);
+  const audioRef = useRef(null);
+
+  // Play audio from base64
+  const playAudio = useCallback((base64Audio, mimeType = 'audio/mpeg') => {
+    try {
+      const audioData = atob(base64Audio);
+      const audioArray = new Uint8Array(audioData.length);
+      for (let i = 0; i < audioData.length; i++) {
+        audioArray[i] = audioData.charCodeAt(i);
+      }
+      const blob = new Blob([audioArray], { type: mimeType });
+      const audioUrl = URL.createObjectURL(blob);
+      
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      
+      const audio = new Audio(audioUrl);
+      audioRef.current = audio;
+      
+      audio.onplay = () => setMode('speaking');
+      audio.onended = () => {
+        setMode('idle');
+        URL.revokeObjectURL(audioUrl);
+      };
+      audio.onerror = () => {
+        console.error('Audio playback error');
+        setMode('idle');
+      };
+      
+      audio.play().catch((err) => {
+        console.error('Audio play failed:', err);
+        setMode('idle');
+      });
+    } catch (err) {
+      console.error('Error playing audio:', err);
+      setMode('idle');
+    }
+  }, []);
 
   useEffect(() => {
     const handleConnected = () => {
@@ -38,6 +77,7 @@ function AgentContextProvider({ children }) {
     const handlePlan = async (payload) => {
       setMode('thinking');
       setLastPlan(payload);
+      setTranscript('');
       try {
         const result = await executePlan(payload);
         agentSocket.sendExecutionResult(payload.plan_id, result.status, result.error || null);
@@ -46,10 +86,27 @@ function AgentContextProvider({ children }) {
       }
     };
 
-    const handleTTS = (payload) => {
-      // Placeholder for audio playback; mark speaking state for UI.
-      if (payload?.audio_url) {
+    const handleSpeak = (payload) => {
+      // Update transcript with what agent says
+      if (payload?.text) {
+        setTranscript(payload.text);
+      }
+      
+      // Play audio if available
+      if (payload?.audio_base64) {
+        playAudio(payload.audio_base64, payload.mime_type || 'audio/mpeg');
+      } else if (payload?.use_browser_tts && payload?.text) {
+        // Use browser's built-in speech synthesis as fallback
         setMode('speaking');
+        const utterance = new SpeechSynthesisUtterance(payload.text);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        utterance.onend = () => setMode('idle');
+        utterance.onerror = () => setMode('idle');
+        window.speechSynthesis.speak(utterance);
+      } else {
+        // No audio, just show text
+        setMode('idle');
       }
     };
 
@@ -58,8 +115,8 @@ function AgentContextProvider({ children }) {
     agentSocket.on('error', handleError);
     agentSocket.on('TRANSCRIPT_PARTIAL', handleSTT);
     agentSocket.on('TRANSCRIPT_FINAL', handleSTT);
-    agentSocket.on('AGENT_PLAN', handlePlan);
-    agentSocket.on('AGENT_TTS', handleTTS);
+    agentSocket.on('ACTION_DISPATCH', handlePlan);
+    agentSocket.on('AGENT_SPEAK', handleSpeak);
 
     if (token) {
       agentSocket.connect();
@@ -71,27 +128,41 @@ function AgentContextProvider({ children }) {
       agentSocket.off('error', handleError);
       agentSocket.off('TRANSCRIPT_PARTIAL', handleSTT);
       agentSocket.off('TRANSCRIPT_FINAL', handleSTT);
-      agentSocket.off('AGENT_PLAN', handlePlan);
-      agentSocket.off('AGENT_TTS', handleTTS);
+      agentSocket.off('ACTION_DISPATCH', handlePlan);
+      agentSocket.off('AGENT_SPEAK', handleSpeak);
       agentSocket.disconnect();
     };
-  }, [executePlan, token]);
+  }, [executePlan, token, playAudio]);
+
+  const sendMessage = useCallback((msg) => {
+    if (agentSocket.ws && agentSocket.ws.readyState === WebSocket.OPEN) {
+      agentSocket.ws.send(JSON.stringify(msg));
+    }
+  }, []);
+
+  const sendBinary = useCallback((data) => {
+    if (agentSocket.ws && agentSocket.ws.readyState === WebSocket.OPEN) {
+      agentSocket.ws.send(data);
+    }
+  }, []);
 
   const value = useMemo(
     () => ({
       mode,
+      setMode,
       transcript,
       lastPlan,
       connection,
       error,
-      setMode,
       setTranscript,
       setLastPlan,
       setError,
       sendContextUpdate: agentSocket.sendContextUpdate.bind(agentSocket),
       sendAudioChunk: agentSocket.sendAudioChunk.bind(agentSocket),
+      sendMessage,
+      sendBinary,
     }),
-    [mode, transcript, lastPlan, connection, error]
+    [mode, transcript, lastPlan, connection, error, sendMessage, sendBinary]
   );
 
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>;
