@@ -1,5 +1,6 @@
 // Sahayak Voice Agent - Content Script
 
+import './styles.css';
 import { ActionExecutor } from './action-executor';
 
 const executor = new ActionExecutor();
