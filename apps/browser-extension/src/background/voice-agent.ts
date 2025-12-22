@@ -1,34 +1,5 @@
-// Voice Agent Manager - Handles STT, LLM, and TTS
-
-// Web Speech API types - these are available in DOM but need declaration for service workers
-interface SpeechRecognitionType {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onresult: ((event: SpeechRecognitionEventType) => void) | null;
-  onerror: ((event: SpeechRecognitionErrorEventType) => void) | null;
-  onend: (() => void) | null;
-}
-
-interface SpeechRecognitionEventType {
-  results: SpeechRecognitionResultList;
-  resultIndex: number;
-}
-
-interface SpeechRecognitionErrorEventType {
-  error: string;
-  message: string;
-}
-
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognitionType;
-}
-
-declare const SpeechRecognition: SpeechRecognitionConstructor | undefined;
-declare const webkitSpeechRecognition: SpeechRecognitionConstructor | undefined;
+// Voice Agent Manager - Handles LLM processing and TTS coordination
+// Note: SpeechRecognition runs in content script (not available in service workers)
 
 type VoiceAgentState = 'idle' | 'listening' | 'processing' | 'speaking' | 'error';
 
@@ -59,8 +30,6 @@ type EventCallback = (...args: unknown[]) => void;
 
 export class VoiceAgentManager {
   private state: VoiceAgentState = 'idle';
-  private recognition: SpeechRecognitionType | null = null;
-  private synthesis: SpeechSynthesis;
   private pageContext: PageContext | null = null;
   private conversationHistory: Array<{ role: string; content: string }> = [];
   private events: Map<string, EventCallback[]> = new Map();
@@ -75,7 +44,6 @@ export class VoiceAgentManager {
   };
 
   constructor() {
-    this.synthesis = globalThis.speechSynthesis || ({} as SpeechSynthesis);
     this.loadConfig();
   }
 
@@ -126,68 +94,12 @@ export class VoiceAgentManager {
 
   async toggle(): Promise<boolean> {
     if (this.state === 'listening') {
-      await this.stop();
+      this.setState('idle');
       return false;
     } else {
-      await this.start();
+      this.setState('listening');
       return true;
     }
-  }
-
-  async start(): Promise<void> {
-    if (this.state !== 'idle') return;
-
-    // Initialize speech recognition
-    const SpeechRecognitionCtor = SpeechRecognition || webkitSpeechRecognition;
-    
-    if (!SpeechRecognitionCtor) {
-      this.emit('error', new Error('Speech recognition not supported'));
-      return;
-    }
-
-    this.recognition = new SpeechRecognitionCtor();
-    this.recognition.continuous = true;
-    this.recognition.interimResults = true;
-    this.recognition.lang = this.config.language;
-
-    this.recognition.onresult = (event: SpeechRecognitionEventType) => {
-      const result = event.results[event.results.length - 1];
-      const transcript: Transcript = {
-        text: result[0].transcript,
-        isFinal: result.isFinal,
-        confidence: result[0].confidence,
-      };
-
-      this.emit('transcript', transcript);
-
-      if (result.isFinal) {
-        this.processTranscript(transcript.text);
-      }
-    };
-
-    this.recognition.onerror = (event: SpeechRecognitionErrorEventType) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error !== 'no-speech') {
-        this.emit('error', new Error(event.error));
-      }
-    };
-
-    this.recognition.onend = () => {
-      // Restart if still in listening state
-      if (this.state === 'listening' && this.recognition) {
-        this.recognition.start();
-      }
-    };
-
-    this.recognition.start();
-    this.setState('listening');
-  }
-  async stop(): Promise<void> {
-    if (this.recognition) {
-      this.recognition.stop();
-      this.recognition = null;
-    }
-    this.setState('idle');
   }
 
   setPageContext(context: PageContext) {
@@ -222,8 +134,8 @@ export class VoiceAgentManager {
         }
       }
 
-      // Speak the response
-      await this.speak(response.text);
+      // Return to listening state (TTS handled by content script)
+      this.setState('listening');
 
       return response;
     } catch (error) {
@@ -233,10 +145,7 @@ export class VoiceAgentManager {
     }
   }
 
-  private async processTranscript(text: string) {
-    if (!text.trim()) return;
-    await this.processText(text);
-  }
+
 
   private buildSystemPrompt(): string {
     let prompt = `You are Sahayak, a helpful voice assistant for web browsing. You help users navigate websites, find information, and interact with web pages.
@@ -326,34 +235,6 @@ Content preview: ${this.pageContext.content.slice(0, 2000)}...`;
       // If JSON parsing fails, use as plain text
     }
     return { text: llmResponse };
-  }
-
-  private async speak(text: string): Promise<void> {
-    if (!this.synthesis || !text) {
-      this.setState('idle');
-      return;
-    }
-
-    this.setState('speaking');
-
-    return new Promise((resolve) => {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = this.config.language;
-      utterance.rate = 1.0;
-      utterance.pitch = 1.0;
-
-      utterance.onend = () => {
-        this.setState('listening');
-        resolve();
-      };
-
-      utterance.onerror = () => {
-        this.setState('listening');
-        resolve();
-      };
-
-      this.synthesis.speak(utterance);
-    });
   }
 
   clearHistory() {

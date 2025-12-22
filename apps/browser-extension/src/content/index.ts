@@ -5,6 +5,66 @@ import { ActionExecutor } from './action-executor';
 
 const executor = new ActionExecutor();
 let isListening = false;
+let recognition: SpeechRecognition | null = null;
+let synthesis: SpeechSynthesis | null = null;
+
+// Initialize speech APIs
+function initSpeech() {
+  const SpeechRecognitionCtor = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+  if (SpeechRecognitionCtor) {
+    recognition = new SpeechRecognitionCtor();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      const result = event.results[event.results.length - 1];
+      const transcript = {
+        text: result[0].transcript,
+        isFinal: result.isFinal,
+        confidence: result[0].confidence,
+      };
+
+      // Send to background for processing
+      chrome.runtime.sendMessage({
+        type: 'TRANSCRIPT',
+        payload: transcript
+      }).catch(() => {});
+
+      showTranscript(transcript);
+
+      // If final, send for processing
+      if (result.isFinal && transcript.text.trim()) {
+        chrome.runtime.sendMessage({
+          type: 'PROCESS_TEXT',
+          text: transcript.text
+        }).catch(() => {});
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      console.error('Speech recognition error:', event.error);
+      if (event.error !== 'no-speech') {
+        showToast('⚠️ Speech recognition error: ' + event.error, 'error');
+      }
+    };
+
+    recognition.onend = () => {
+      // Auto-restart if still listening
+      if (isListening && recognition) {
+        try {
+          recognition.start();
+        } catch (e) {
+          console.error('Failed to restart recognition:', e);
+        }
+      }
+    };
+  }
+
+  synthesis = window.speechSynthesis;
+}
+
+initSpeech();
 
 // Create UI elements
 function createUI() {
@@ -72,9 +132,15 @@ function getPageContent(): string {
 
 // Handle messages from background
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  console.log('📨 Content script received message:', message.type);
   switch (message.type) {
     case 'VOICE_STATUS':
-      updateVoiceIndicator(message.payload.isListening);
+      console.log('🔊 VOICE_STATUS:', message.payload.isListening);
+      if (message.payload.isListening) {
+        startListening();
+      } else {
+        stopListening();
+      }
       break;
 
     case 'VOICE_TRANSCRIPT':
@@ -83,6 +149,14 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
 
     case 'VOICE_RESPONSE':
       showResponse(message.payload);
+      // Speak the response
+      if (synthesis && message.payload.text) {
+        const utterance = new SpeechSynthesisUtterance(message.payload.text);
+        utterance.lang = 'en-US';
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+        synthesis.speak(utterance);
+      }
       break;
 
     case 'EXECUTE_ACTION':
@@ -96,6 +170,34 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
       break;
   }
 });
+
+function startListening() {
+  console.log('🎤 startListening called');
+  if (!recognition) {
+    console.error('❌ Speech recognition not available');
+    showToast('⚠️ Speech recognition not supported', 'error');
+    return;
+  }
+
+  try {
+    console.log('🎤 Starting speech recognition...');
+    recognition.start();
+    isListening = true;
+    updateVoiceIndicator(true);
+    console.log('✅ Speech recognition started');
+  } catch (e) {
+    console.error('❌ Failed to start recognition:', e);
+    showToast('⚠️ Failed to start: ' + (e as Error).message, 'error');
+  }
+}
+
+function stopListening() {
+  if (recognition) {
+    recognition.stop();
+  }
+  isListening = false;
+  updateVoiceIndicator(false);
+}
 
 function updateVoiceIndicator(listening: boolean) {
   isListening = listening;
@@ -159,6 +261,22 @@ function showResponse(response: { text: string; suggestions?: string[] }) {
   }, 8000);
 }
 
+function showToast(message: string, type: 'info' | 'error' = 'info') {
+  const toast = document.getElementById('sahayak-toast');
+  if (!toast) return;
+
+  toast.innerHTML = `
+    <div class="sahayak-toast-content ${type}">
+      <span class="sahayak-toast-text">${message}</span>
+    </div>
+  `;
+  toast.classList.add('visible');
+
+  setTimeout(() => {
+    toast.classList.remove('visible');
+  }, 3000);
+}
+
 // Send initial page context
 sendPageContext();
 
@@ -183,4 +301,5 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-console.log('Sahayak Voice Agent content script loaded');
+console.log('✅ Sahayak Voice Agent content script loaded');
+console.log('🎤 Speech Recognition available:', !!recognition);

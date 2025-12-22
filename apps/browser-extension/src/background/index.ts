@@ -43,10 +43,15 @@ async function handleMessage(message: any, sender: chrome.runtime.MessageSender)
   
   switch (message.type) {
     case 'TOGGLE_VOICE':
-      if (tabId) {
-        return await toggleVoice(tabId);
+      // Get active tab if not from content script
+      if (!tabId) {
+        const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (activeTab?.id) {
+          return await toggleVoice(activeTab.id);
+        }
+        return { error: 'No active tab found' };
       }
-      break;
+      return await toggleVoice(tabId);
       
     case 'GET_STATUS':
       return {
